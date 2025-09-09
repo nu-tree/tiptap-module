@@ -15,8 +15,8 @@ import Table from '@tiptap/extension-table';
 import TableRow from '@tiptap/extension-table-row';
 import TableHeader from '@tiptap/extension-table-header';
 import TableCell from '@tiptap/extension-table-cell';
-import { useEffect, useRef, useMemo } from 'react';
-import { useContentStore, useContentStoreSelector } from '@/components/custom-ui/tiptap/plugin';
+import { useEffect } from 'react';
+import { useContentStore } from '@/components/custom-ui/tiptap/plugin';
 import { cn } from '@/lib/utils';
 import { Toolbar } from './toolbar';
 import { ScrollArea } from '../../scroll-area/scroll-area';
@@ -35,15 +35,11 @@ export const TiptapEditor = ({
   className,
   keyId,
   height = 400,
-  content: initialContentProp,
+  content: initialContent,
   onImageUpload,
   onChange,
 }: Props) => {
-  const { getContent, setContent } = useContentStore();
-  // 특정 키만 구독하여 불필요한 리렌더링 방지
-  const { content: storedContent } = useContentStoreSelector(keyId);
-
-  const initialContent = initialContentProp ?? storedContent ?? getContent(keyId);
+  const { setContent } = useContentStore();
 
   const editor = useEditor({
     extensions: [
@@ -75,18 +71,12 @@ export const TiptapEditor = ({
       TableCell,
     ],
     content: initialContent,
-    editorProps: {
-      attributes: {
-        class: 'h-full',
-      },
-    },
     immediatelyRender: false,
     // EditorContent 리렌더링 최적화
     shouldRerenderOnTransaction: false,
     onCreate: ({ editor }) => {
       // 에디터 생성 시 기본 폰트 크기와 폰트 설정
       editor.chain().selectAll().setFontSize('18px').setFontFamily(FontOptions['맑은 고딕']).run();
-      editor.commands.blur();
     },
     onUpdate: ({ editor }) => {
       const content = editor.getHTML();
@@ -95,23 +85,14 @@ export const TiptapEditor = ({
     },
   });
 
-  const didSetInitialContent = useRef(false);
-
-  // 메모화된 초기 콘텐츠 설정 로직
-  const shouldSetInitialContent = useMemo(() => {
-    return initialContentProp !== undefined && !didSetInitialContent.current;
-  }, [initialContentProp]);
-
   useEffect(() => {
     if (!editor) return;
-
     // 초기값 설정 (최초 1회)
-    if (shouldSetInitialContent) {
-      editor.commands.setContent(initialContentProp!);
-      setContent(keyId, initialContentProp!);
-      didSetInitialContent.current = true;
+    if (initialContent) {
+      editor.commands.setContent(initialContent!);
+      setContent(keyId, initialContent!);
     }
-  }, [editor, shouldSetInitialContent, initialContentProp, keyId, setContent]);
+  }, [editor, initialContent, keyId, setContent]);
 
   if (!editor) return null;
 
